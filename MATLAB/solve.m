@@ -18,25 +18,28 @@ classdef solve
             %% Model parameters, grids and functions.
             
             beta = par.beta; % Discount factor.
+            gamma = par.gamma; % Probability of new idea.
 
             alen = par.alen; % Grid size for a.
             agrid = par.agrid; % Grid for a (state and choice).
 
-            zlen = par.zlen; % Grid size for z.
-            zgrid = par.zgrid; % Grid for z.
-            pmat = par.pmat; % Transition matrix for z.
+            elen = par.elen; % Grid size for e.
+            prob_eshock = par.prob_eshock; % Probabilities for e.
 
             r = par.r; % Real interest rate, taken as given by households.
             w = par.w; % Real wage rate, taken as given by households.
+            pi = sol.pi; % Firm profits.
             
-            %phi = -w*par.zgrid(1)/r; % The natural borrowing constraint---the present value of the worst possible realization of income. Set amin in the model file to be a negative number.
-            phi = 0; % The zero borrowing constraint---no borrowing allowed. Set amin in the model file to be zero.
-
             %% Value Function Iteration.
             
-            v1 = nan(alen,zlen); % Container for V.
-            a1 = nan(alen,zlen); % Container for a'.
-            c1 = nan(alen,zlen); % Container for c'.
+            o1 = nan(alen,elen); % Container for occupational choice.
+            v1 = nan(alen,elen); % Container for V.
+            v1_worker = nan(alen,elen); % Container for V.
+            v1_entrepreneur = nan(alen,elen); % Container for V.
+            c1_worker = nan(alen,elen); % Container for c' for workers.
+            c1_entrepreneur = nan(alen,elen); % Container for c' for entrepreneurs.
+            a1_worker = nan(alen,elen); % Container for a' for workers.
+            a1_entrepreneur = nan(alen,elen); % Container for a' for entrepreneurs.
 
             crit = 1e-6;
             maxiter = 10000;
@@ -45,30 +48,49 @@ classdef solve
             
             fprintf('------------Beginning Value Function Iteration.------------\n\n')
 
-            c0 = (1+r)*agrid+w.*zgrid; % Guess of consumption is to consume everything; this is a matrix because agrid is a column vector and zgrid is a row vector.
-            v0 = model.utility(c0,par)./(1-beta);
+            v0 = zeros(alen,elen); % Guess of value function is zeros.
             
             while diff > crit && iter < maxiter % Iterate on the Bellman Equation until convergence.
                 
                 for p = 1:alen % Loop over the a-states.
-                    if agrid(p) >= phi % Only solve the model when the borrowing constraint isnt violated.
-                        for j = 1:zlen % Loop over the y-states.
-    
-                            % Consumption.
-                            c = (1+r)*agrid(p)+w.*zgrid(j)-agrid; % Possible values for consumption, c(t) = (1+r)a(t-1) + y(t) - a(t+1).
-    
-                            % Solve the maximization problem.
-                            ev = v0*pmat(j,:)'; %  The next-period value function is the expected value function over each possible next-period A, conditional on the current state j.
-                            vall = model.utility(c,par) + beta*ev; % Compute the value function for each choice of k', given k.
-                            vall(c<=0) = -inf; % Set the value function to negative infinity when c < 0.
-                            [vmax,ind] = max(vall); % Maximize: vmax is the maximized value function; ind is where it is in the grid.
-                        
-                            % Store values.
-                            v1(p,j) = vmax; % Maximized v.
-                            c1(p,j) = c(ind); % Optimal c'.
-                            a1(p,j) = agrid(ind); % Optimal a'.
-       
+                    for j = 1:elen % Loop over the z-states.
+
+                        % Consumption for workers.
+                        cw = (1+r)*agrid(p)+w-agrid;
+
+                        % Consumption for entrepreneurs.
+                        ce = (1+r)*agrid(p)+pi(p,j)-agrid;
+
+                        % Next-period value function.
+                        ev = gamma*v0(:,j) + (1-gamma).*v0*prob_eshock;
+
+                        % Solve the maximization problem for workers.
+                        vw = model.utility(cw,par) + beta*ev; % Compute the value function for each choice of a', given a.
+                        vw(cw<=0) = -inf; % Set the value function to negative infinity when c < 0.
+                        [vwmax,wind] = max(vw); % Maximize: vwmax is the maximized value function; ind is where it is in the grid.
+                    
+                        % Solve the maximization problem.
+                        ve = model.utility(cw,par) + beta*ev; % Compute the value function for each choice of a', given a.
+                        ve(ce<=0) = -inf; % Set the value function to negative infinity when c < 0.
+                        [vemax,eind] = max(ve); % Maximize: vemax is the maximized value function; ind is where it is in the grid.
+                    
+                        % Store values.
+                        v1_worker(p,j) = vwmax; % Maximized v for workers.
+                        v1_entrepreneur(p,j) = vemax; % Maximized v for entrepreneurs.
+                        c1_worker(p,j) = cw(wind); % Optimal c' for workers.
+                        c1_entrepreneur(p,j) = ce(eind); % Optimal c' for entrepreneurs.
+                        a1_worker(p,j) = agrid(wind); % Optimal a'.
+                        a1_entrepreneur(p,j) = agrid(eind); % Optimal a'.
+
+                        if vwmax > vemax
+                            v1(p,j) = vwmax; % Overall value function.
+                            o1(p,j) = 1; % Occupational choice.
+                        else
+                            v1(p,j) = vemax; % Overall value function.
+                            o1(p,j) = 0; % Occupational choice.
                         end
+
+   
                     end
                 end
                 
@@ -90,8 +112,13 @@ classdef solve
             
             %% Macro variables, value, and policy functions.
             
-            sol.a = a1; % Savings policy function.
-            sol.c = c1; % Consumption policy function.
+            sol.ae = a1_entrepreneur; % Savings policy function for entrepreneur.
+            sol.aw = a1_worker; % Savings policy function for worker.
+            sol.ce = c1_entrepreneur; % Consumption policy function for entrepreneur.
+            sol.cw = c1_worker; % Consumption policy function for worker.
+            sol.ve = v1_entrepreneur; % Entrepreneur value function.
+            sol.vw = v1_worker; % Worker value function.
+            sol.o = o1; % Occupational choice.
             sol.v = v1; % Value function.
             
         end
@@ -100,19 +127,50 @@ classdef solve
 
         function [par,sol] = firm_problem(par)
             %% Model parameters, grids and functions.
+
+            alen = par.alen;
+            elen = par.elen;
             
             delta = par.delta; % Depreciation rate.
             alpha = par.alpha; % Capital's share of income.
+            eshock = par.eshock; % Productivity shocks.
+            kappa = par.kappa; % Fixed cost of investment.
+            agrid = par.agrid;
+            phi = par.phi; % Contract enforcement.
 
             r = par.r; % Real interest rate, which the firm takes as given.
-            k = ((r+delta)/alpha)^(1/(alpha-1)); % Capital stock solved from the first-order condition.
+            w = par.w; % Real wages, which the firm takes as given.
+            L = par.L; % Labor supply set exogenously or solved from GE.
+            K = ((1-alpha)/alpha)*(w/r)*L; % Capital stock solved from ratio of marginal products.
             
             %% Capital and wages.
             
             sol = struct();
 
-            sol.k = k; % Capital stock.
-            par.w = (1-alpha)*k^alpha; % Real wage rate.
+            pi = eshock.*(K^alpha).*L^(1-alpha) - w*L - (r+delta)*K - (1+r)*kappa; % Profit.
+            pi = repmat(pi',alen,1);
+
+            kbar = zeros(par.alen,par.elen);
+
+            for j = 1:alen
+                for q = 1:elen
+                    kfun = @(X)(eshock(q).*(X^alpha).*L^(1-alpha) - w*L - (r+delta)*X - (1+r)*kappa + (1+r)*agrid(j) - (1-phi)*(eshock(q).*(X^alpha).*L^(1-alpha) - w*L + (1-delta)*X));
+                    ksol = fsolve(kfun,K);
+                    kbar(j,q) = ksol;
+                    
+                    if ~isreal(kbar)
+                        kbar(j,q) = par.amin;
+                    end
+
+                    if kbar(j,q) < K
+                        pi(j,q) = eshock(q)*(kbar(j,q)^alpha)*L^(1-alpha) - w*L - (r+delta)*kbar(j,q) - (1+r)*kappa;
+                    end
+
+                end
+            end
+
+            sol.kbar = kbar;
+            sol.pi = pi;
             
         end
 

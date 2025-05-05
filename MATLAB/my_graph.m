@@ -14,42 +14,96 @@ classdef my_graph
     methods(Static)
         %% Plot value and policy functions.
         
-        function [] = plot_dist_pe(sim)
-            %% Plot density function (partial equilibrium).
-            
+        function [] = plot_policy(par,sol)
+            %% Plot discrete choice policy function.
+
+            close all
+
+            agrid = par.agrid;
+            egrid = par.eshock;
+               
             figure(1)
             
-            histogram(sim.asim,20)
-            xlabel({'$a$'},'Interpreter','latex')
-            ylabel({'Frequency'},'Interpreter','latex') 
-            title('Distribution of Wealth')
-
-        end
-            
-        function [] = plot_dist_ge(sim_ge)
-            %% Plot density function (general equilibrium).
+            surf(agrid,egrid,sol.o')
+                xlabel({'$a_t$'},'Interpreter','latex')
+                ylabel({'$e_{t}$'},'Interpreter','latex') 
+                zlabel({'$o_{t}$'},'Interpreter','latex') 
+            title('Occupational Choice (0=Self-Emplopyed, 1=Worker)','Interpreter','latex')
             
             figure(2)
             
-            histogram(sim_ge.asim,20)
-            xlabel({'$a$'},'Interpreter','latex')
-            ylabel({'Frequency'},'Interpreter','latex') 
-            title('Distribution of Wealth')
-
-        end
-            
-        function [] = cfun(par,sol)
-            
-            %% Plot consumption policy function.
+            surf(agrid,egrid,sol.cw')
+                xlabel({'$a_t$'},'Interpreter','latex')
+                ylabel({'$e_{t}$'},'Interpreter','latex') 
+                zlabel({'$c_{t}$'},'Interpreter','latex') 
+            title('Consumption Policy Function (Worker)','Interpreter','latex')
             
             figure(3)
             
-            plot(par.agrid,sol.c)
-            xlabel({'$a_{t}$'},'Interpreter','latex')
-            ylabel({'$c_{t}$'},'Interpreter','latex') 
-            title('Consumption Policy Function')
+            surf(agrid,egrid,sol.ce')
+                xlabel({'$a_t$'},'Interpreter','latex')
+                ylabel({'$e_{t}$'},'Interpreter','latex') 
+                zlabel({'$c_{t}$'},'Interpreter','latex') 
+            title('Consumption Policy Function (Self-Employed)','Interpreter','latex')
+            
+            figure(4)
+            
+            surf(agrid,egrid,sol.vw')
+                xlabel({'$a_t$'},'Interpreter','latex')
+                ylabel({'$e_{t}$'},'Interpreter','latex') 
+                zlabel({'$v_{t}$'},'Interpreter','latex') 
+            title('Value Function (Worker)','Interpreter','latex')
+            
+            figure(5)
+            
+            surf(agrid,egrid,sol.ve')
+                xlabel({'$a_t$'},'Interpreter','latex')
+                ylabel({'$e_{t}$'},'Interpreter','latex') 
+                zlabel({'$v_{t}$'},'Interpreter','latex') 
+            title('Value Function (Self-Employed)','Interpreter','latex')
+            
+            figure(6)
+            
+            surf(agrid,egrid,sol.v')
+                xlabel({'$a_t$'},'Interpreter','latex')
+                ylabel({'$e_{t}$'},'Interpreter','latex') 
+                zlabel({'$v_{t}$'},'Interpreter','latex') 
+            title('Value Function (Overall)','Interpreter','latex')
+            
+            figure(7)
+            
+            surf(agrid,egrid,sol.aw')
+                xlabel({'$a_t$'},'Interpreter','latex')
+                ylabel({'$e_{t}$'},'Interpreter','latex') 
+                zlabel({'$a_{t}$'},'Interpreter','latex') 
+            title('Savings Policy Function (Worker)','Interpreter','latex')
+            
+            figure(8)
+            
+            surf(agrid,egrid,sol.ae')
+                xlabel({'$a_t$'},'Interpreter','latex')
+                ylabel({'$e_{t}$'},'Interpreter','latex') 
+                zlabel({'$a_{t}$'},'Interpreter','latex') 
+            title('Savings Policy Function (Self-Employed)','Interpreter','latex')
+            
+            figure(9)
+            
+            surf(agrid,egrid,sol.kbar')
+                xlabel({'$a_t$'},'Interpreter','latex')
+                ylabel({'$e_{t}$'},'Interpreter','latex') 
+                zlabel({'$\bar{K}_{t}$'},'Interpreter','latex') 
+            title('Capital Rental Limit','Interpreter','latex')
+            
+            figure(10)
+            
+            surf(agrid,egrid,sol.pi')
+                xlabel({'$a_t$'},'Interpreter','latex')
+                ylabel({'$e_{t}$'},'Interpreter','latex') 
+                zlabel({'$\pi_{t}$'},'Interpreter','latex') 
+            title('Profit Function','Interpreter','latex')
             
         end
+
         
     end
 end
