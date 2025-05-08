@@ -74,7 +74,7 @@ classdef my_graph
                 ylabel({'$e_{t}$'},'Interpreter','latex') 
                 zlabel({'$v_{t}$'},'Interpreter','latex') 
             title('Value Function (Overall)','Interpreter','latex')
-            saveas(gcf, fullfile(figout, 'vpol1_2.png'))
+            saveas(gcf, fullfile(figout, 'vpol1_3.png'))
             
             figure(7)
             
